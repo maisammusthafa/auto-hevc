@@ -12,7 +12,7 @@ def transcode(i_file):
 
 while True:
     time.sleep(20)
-    filelist = glob.glob(path + "/transcoded_*.mkv")
+    filelist = glob.glob(path + "/*.mkv")
     if len(filelist) != 0:
-        transcode(filelist[0])
+        transcode(os.path.basename(filelist[0]))
 
