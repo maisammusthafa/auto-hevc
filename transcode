@@ -1,0 +1,18 @@
+#!/bin/python
+import glob, os, shutil, sys, time
+from subprocess import call
+
+path = "/home/fx/sources"
+
+def transcode(i_file):
+    time.sleep(10)
+    call("ffmpeg -i \"" + path + "/" + i_file + "\" -c:v libx265 -preset slow -crf 25 -c:a libfdk_aac -profile:a aac_he -b:a 256k \"/mnt/ffmpeg/transcoding_" + i_file + "\"", shell=True)
+    os.rename("\"/mnt/ffmpeg/transcoding_" + i_file + "\"", "\"/mnt/ffmpeg/transcoded_" + i_file + "\"")
+    os.remove(path + "/" + i_file)
+
+while True:
+    time.sleep(20)
+    filelist = glob.glob(path + "/transcoded_*.mkv")
+    if len(filelist) != 0:
+        transcode(filelist[0])
+
