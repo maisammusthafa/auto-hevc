@@ -1,0 +1,85 @@
+#!/bin/python2
+import os, time, sys
+import urllib2, json, base64
+
+class Torrent:
+    def __init__(self, torrent_file):
+        if len(sys.argv) == 2:
+            self.gid = self.method('aria2.addTorrent', base64.b64encode(open(torrent_file).read()) )
+            self.method('aria2.pause', self.gid)
+            self.file = '1'
+            self.files = str(len(self.method('aria2.getFiles', self.gid)))
+            self.save_state()
+        else:
+            self.load_state()
+
+        self.name = self.method('aria2.tellStatus', self.gid)['bittorrent']['info']['name']
+        self.length = ''
+        self.done = ''
+        self.status = 'null'
+        self.method('select-file', self.file)
+        self.refresh_status()
+
+    def save_state(self):
+        state = open('torrent.state', 'w')
+        self.files = str(len(self.method('aria2.getFiles', self.gid)))
+        state.write(':'.join([self.gid, self.files, self.file]))
+        state.close()
+
+    def load_state(self):
+        state = open('torrent.state', 'r').readlines()[0].strip().split(':')
+        self.gid = state[0]
+        self.files = state[1]
+        self.file = state[2]
+
+    def method(self, *args):
+        if args[0] == 'select-file':
+            jsonreq = json.dumps({'jsonrpc':'2.0', 'id':'qwer', 'method':'aria2.changeOption', 'params':[self.gid, {'select-file':args[1]}]})
+        else:
+            jsonreq = json.dumps({'jsonrpc':'2.0', 'id':'asdf', 'method':args[0], 'params':[args[1]]})
+        server = urllib2.urlopen('http://localhost:6800/jsonrpc', jsonreq)
+        return json.loads(server.read())['result']
+
+    def next(self):
+        self.file = str(int(self.file) + 1)
+        self.method('select-file', self.file)
+        self.length = self.method('aria2.getFiles', self.gid)[int(self.file) - 1]['length']
+        self.save_state()
+
+    def refresh_status(self):
+        prev_status = self.status
+        while self.status == prev_status:
+            self.status = self.method('aria2.tellStatus', self.gid)['status']
+            time.sleep(0.5)
+
+
+def start_queue():
+    print("[  BEGIN  ] " + torrent.name)
+    torrent.load_state()
+
+    if torrent.status == 'paused':
+        torrent.method('aria2.unpause', torrent.gid)
+        torrent.refresh_status()
+
+    torrent.length = torrent.method('aria2.getFiles', torrent.gid)[int(torrent.file) - 1]['length']
+    print("[ current ] " + os.path.basename(torrent.method('aria2.getFiles', torrent.gid)[int(torrent.file) - 1]['path']))
+
+    while True:
+        torrent.done = torrent.method('aria2.getFiles', torrent.gid)[int(torrent.file) - 1]['completedLength']
+        if torrent.done == torrent.length:
+            time.sleep(5)
+            if torrent.file == torrent.files:
+                print("[   END   ] " + torrent.name)
+                break
+            torrent.next()
+            print("[ current ] " + os.path.basename(torrent.method('aria2.getFiles', torrent.gid)[int(torrent.file) - 1]['path']))
+
+def main():
+    if len(sys.argv) == 2:
+        torrent = Torrent(sys.argv[1])
+    else:
+        torrent = Torrent('')
+    start_queue()
+
+main()
+
