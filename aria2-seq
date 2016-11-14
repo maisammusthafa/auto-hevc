@@ -57,6 +57,37 @@ class Torrent:
             time.sleep(0.5)
 
 
+def check_free():
+    free_space = os.statvfs(torrent.file_path)[1] * os.statvfs(torrent.file_path)[4]
+
+    if free_space < 536870912:
+        torrent.method('aria2.pause', torrent.gid)
+        while free_space < 536870912:
+            time.sleep(10)
+        torrent.method('aria2.unpause', torrent.gid)
+
+
+def advance_queue():
+    time.sleep(5)
+
+    if torrent.file == torrent.files:
+        print("[   END   ] " + torrent.name)
+        os.remove('torrent.state')
+        break
+
+    shutil.move(torrent.file_path, "/home/fx/sources/")
+    dirlist = glob.glob(os.path.dirname(torrent.file_path) + "/*")
+
+    for f in dirlist:
+        if os.path.isfile(f):
+            os.remove(f)
+        else:
+        shutil.rmtree(f)
+
+    torrent.next()
+    print("[ current ] " + os.path.basename(torrent.method('aria2.getFiles', torrent.gid)[int(torrent.file) - 1]['path']))
+
+
 def start_queue():
     print("[  BEGIN  ] " + torrent.name)
     torrent.load_state()
@@ -72,23 +103,19 @@ def start_queue():
     while True:
         torrent.done = torrent.method('aria2.getFiles', torrent.gid)[int(torrent.file) - 1]['completedLength']
         if torrent.done == torrent.length:
-            time.sleep(5)
-            if torrent.file == torrent.files:
-                print("[   END   ] " + torrent.name)
-                break
-            shutil.move(torrent.file_path, "/home/fx/sources/")
-            dirlist = glob.glob(os.path.dirname(torrent.file_path) + "/*")
-            for f in dirlist:
-                if os.path.isfile(f):
-                    os.remove(f)
-                else:
-                    shutil.rmtree(f)
-            torrent.next()
-            print("[ current ] " + os.path.basename(torrent.method('aria2.getFiles', torrent.gid)[int(torrent.file) - 1]['path']))
+            advance_queue()
+        check_free()
 
-if len(sys.argv) == 2:
-    torrent = Torrent(sys.argv[1])
-else:
-    torrent = Torrent('')
-start_queue()
+
+def main()
+    global torrent
+
+    if len(sys.argv) == 2:
+        torrent = Torrent(sys.argv[1])
+    else:
+        torrent = Torrent('')
+
+    start_queue()
+
+main()
 
