@@ -80,7 +80,7 @@ def advance_queue():
         os.remove('torrent.state')
         sys.exit()
 
-    shutil.move(torrent.file_path, "/home/fx/sources/")
+    shutil.move(torrent.file_path, "/home/fx/auto-hevc/sources/")
     dirlist = glob.glob(os.path.dirname(torrent.file_path) + "/*")
 
     for f in dirlist:
