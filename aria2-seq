@@ -61,9 +61,14 @@ def check_free():
     free_space = os.statvfs(torrent.file_path)[1] * os.statvfs(torrent.file_path)[4]
 
     if free_space < 536870912:
+        print("[  PAUSE  ] Low disk space. Available: " + str(free_space / 1048576) + " MB")
         torrent.method('aria2.pause', torrent.gid)
+
         while free_space < 536870912:
             time.sleep(10)
+            free_space = os.statvfs(torrent.file_path)[1] * os.statvfs(torrent.file_path)[4]
+
+        print("[ UNPAUSE ] Freed disk space. Available: " + str(free_space / 1048576) + " MB")
         torrent.method('aria2.unpause', torrent.gid)
 
 
@@ -73,7 +78,7 @@ def advance_queue():
     if torrent.file == torrent.files:
         print("[   END   ] " + torrent.name)
         os.remove('torrent.state')
-        break
+        sys.exit()
 
     shutil.move(torrent.file_path, "/home/fx/sources/")
     dirlist = glob.glob(os.path.dirname(torrent.file_path) + "/*")
@@ -82,7 +87,7 @@ def advance_queue():
         if os.path.isfile(f):
             os.remove(f)
         else:
-        shutil.rmtree(f)
+            shutil.rmtree(f)
 
     torrent.next()
     print("[ current ] " + os.path.basename(torrent.method('aria2.getFiles', torrent.gid)[int(torrent.file) - 1]['path']))
