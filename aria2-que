@@ -1,0 +1,47 @@
+#!/bin/python2
+import os, time
+import json, urllib2
+
+class Download:
+    def __init__(self, url):
+        self.url = url
+        self.gid = self.method('aria2.addUri', self.url)
+        self.name = os.path.basename(url)[len('transcoded_'):]
+        time.sleep(5)
+        self.file_path = self.method('aria2.getFiles', self.gid)[0]['path']
+        self.length = self.method('aria2.tellStatus', self.gid)['totalLength']
+        self.done = ''
+
+    def method(self, method, params):
+        if method == 'aria2.addUri':
+            jsonreq = json.dumps({'jsonrpc':'2.0', 'id':'qwer', 'method':method, 'params':[[params]]})
+        else:
+            jsonreq = json.dumps({'jsonrpc':'2.0', 'id':'qwer', 'method':method, 'params':[params]})
+        server = urllib2.urlopen('http://localhost:6800/jsonrpc', jsonreq)
+        return json.loads(server.read())['result']
+
+
+def advance_queue():
+    next_file = urllib2.urlopen(host + source).read().decode('utf-8').strip()
+    if next_file == '':
+        time.sleep(60)
+        advance_queue()
+
+    download = Download(host + next_file)
+    print("[ queued ] " + download.name)
+
+    while True:
+        time.sleep(60)
+        download.done = download.method('aria2.tellStatus', download.gid)['completedLength']
+        if download.done == download.length:
+            os.rename(download.file_path, os.path.dirname(download.file_path) + "/" + download.name)
+            advance_queue()
+
+def main():
+    global host, source
+    host = "http://archvps/"
+    source = "next.txt"
+    advance_queue()
+
+main()
+
