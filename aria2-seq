@@ -2,6 +2,9 @@
 import glob, os, time, shutil, sys
 import urllib2, json, base64
 
+DOWNLOAD_PATH="/home/fx/auto-hevc/sources/"
+MIN_FREE_SPACE=512
+
 class Torrent:
     def __init__(self, torrent_file):
         if len(sys.argv) == 2:
@@ -21,6 +24,7 @@ class Torrent:
         self.length = ''
         self.done = ''
         self.status = 'null'
+        self.refresh_status()
 
     def save_state(self):
         state = open('torrent.state', 'w')
@@ -61,15 +65,15 @@ class Torrent:
 
 
 def check_free():
-    free_space = os.statvfs(torrent.file_path)[1] * os.statvfs(torrent.file_path)[4]
+    free_space = os.statvfs(DOWNLOAD_PATH)[1] * os.statvfs(DOWNLOAD_PATH)[4]
 
-    if free_space < 536870912:
+    if free_space < MIN_FREE_SPACE * 1048576:
         print("[  PAUSE  ] Low disk space. Available: " + str(free_space / 1048576) + " MB")
         torrent.method('aria2.pause', torrent.gid)
 
-        while free_space < 536870912:
+        while free_space < MIN_FREE_SPACE * 1048576:
             time.sleep(10)
-            free_space = os.statvfs(torrent.file_path)[1] * os.statvfs(torrent.file_path)[4]
+            free_space = os.statvfs(DOWNLOAD_PATH)[1] * os.statvfs(DOWNLOAD_PATH)[4]
 
         print("[ UNPAUSE ] Freed disk space. Available: " + str(free_space / 1048576) + " MB")
         torrent.method('aria2.unpause', torrent.gid)
@@ -83,7 +87,7 @@ def advance_queue():
         os.remove('torrent.state')
         sys.exit()
 
-    shutil.move(torrent.file_path, "/home/fx/auto-hevc/sources/")
+    shutil.move(torrent.file_path, download_path)
     dirlist = glob.glob(os.path.dirname(torrent.file_path) + "/*")
 
     for f in dirlist:

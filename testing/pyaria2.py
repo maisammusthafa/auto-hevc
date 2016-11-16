@@ -47,9 +47,10 @@ class PyAria2(object):
                     time.sleep(3)
                 if count == 5:
                     raise Exception('aria2 RPC server started failure.')
-            print('aria2 RPC server is started.')
+            # print('aria2 RPC server is started.')
         else:
-            print('aria2 RPC server is already running.')
+            pass
+            # print('aria2 RPC server is already running.')
 
         server_uri = SERVER_URI_FORMAT.format(host, port)
         self.server = xmlrpc.client.ServerProxy(server_uri, allow_none=True)

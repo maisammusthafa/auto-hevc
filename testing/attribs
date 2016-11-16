@@ -1,0 +1,19 @@
+gid
+status
+totalLength
+completedLength
+downloadSpeed
+uploadSpeed
+infoHash
+numSeeders
+connections
+dir
+files
+    index
+    path
+    length
+    completedLength
+    selected
+bittorrent
+    info
+        name
