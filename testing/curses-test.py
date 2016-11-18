@@ -8,9 +8,11 @@ class Download:
     def __init__(self, data):
         self.data = data
         self.gid = self.data['gid']
+
         self.name = os.path.basename(self.data['files'][0]['path'])
         if self.name == '':
             self.name = "N/A"
+
         self.size = int(self.data['totalLength'])
         self.refresh(True)
 
@@ -20,25 +22,29 @@ class Download:
 
         self.done = int(self.data['completedLength'])
         self.status = self.data['status']
+
         if self.size != 0:
             self.progress = self.done / self.size * 100
         else:
             self.progress = 0
-        self.dl_speed = int(self.data['downloadSpeed']) / 1024
-        if self.dl_speed != 0:
-            eta_s = (self.size - self.done) / (self.dl_speed * 1024)
+
+        self.dl = int(self.data['downloadSpeed']) / 1024
+
+        if self.dl != 0:
+            eta_s = (self.size - self.done) / (self.dl * 1024)
             m, s = divmod(eta_s, 60)
             h, m = divmod(m, 60)
             self.eta = "%d:%02d:%02d" % (h, m, s)
         else:
             self.eta = "N/A"
+
         return self
 
 
 def curse(screen):
     screen.clear()
-
     curses.curs_set(False)
+
     dims = screen.getmaxyx()
     curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
 
@@ -53,12 +59,13 @@ def curse(screen):
         downloads = []
         active = server.tellActive()
         waiting = server.tellWaiting(0, 100)
-        stopped = server.tellStopped(0, 100)
+        stopped = server.tellStopped(-1, 100)
         states = [active, waiting, stopped]
 
         for state in states:
             for i in range(len(state)):
                 downloads.append(Download(state[i]))
+
         return downloads
 
 
@@ -71,51 +78,67 @@ def curse(screen):
         option = 0
         screen.nodelay(True)
         downloads = get_downloads()
+
+        def create_item(*args):
+            item = ""
+            for arg in args:
+                item += (arg[0] +  (arg[1] - len(arg[0])) * ' ')
+            return item
+
+
         while selection < 0:
             screen.clear()
             time.sleep(0.2)
+
             num = len(downloads)
             if num == 0:
                 num = 1
+
             graphics = [0] * num
             graphics[option] = curses.A_REVERSE
+
             t_name, t_size, t_status, t_progress, t_dl, t_eta = "NAME", "SIZE", "STATUS", "PROGRESS", "DL", "ETA"
-            t_string = (
-                        t_name + ((s_name) - len(t_name)) * ' ' +
-                        t_size + ((s_size) - len(t_size)) * ' ' +
-                        t_status + ((s_status) - len(t_status)) * ' ' +
-                        t_progress + ((s_progress) - len(t_progress)) * ' ' +
-                        t_dl + ((s_dl) - len(t_dl)) * ' ' +
-                        t_eta + ((s_eta) - len(t_eta)) * ' '
-                    )
+            t_string = create_item(
+                                   (t_name, s_name),
+                                   (t_size, s_size),
+                                   (t_status, s_status),
+                                   (t_progress, s_progress),
+                                   (t_dl, s_dl),
+                                   (t_eta, s_eta)
+                                  )
+
             screen.addstr(0, 0, t_string, curses.color_pair(1) | curses.A_BOLD)
+
             if len(downloads) != 0:
                 for i in range(len(downloads)):
-                    name = downloads[i].name[:50]
-                    size = str("%0.2f" % (downloads[i].size / 1048576)) + " MB"
-                    status = downloads[i].status.replace("active", "active  ")
-                    progress = str("%0.2f" % downloads[i].progress) + "%"
-                    dl_speed = (str("%0.1f" % downloads[i].dl_speed) + " KB/s").replace("0.0 KB/s", "N/A")
-                    eta = downloads[i].eta
-                    item = (
-                            name + (s_name - len(name)) * ' ' +
-                            size + (s_size - len(size)) * ' ' +
-                            status + (s_status - len(status)) * ' ' +
-                            progress + (s_progress - len(progress)) * ' ' +
-                            dl_speed + (s_dl - len(dl_speed)) * ' ' +
-                            eta + (s_eta - len(eta)) * ' '
-                           )
 
-                    if status == 'waiting':
+                    i_name = downloads[i].name[:50]
+                    i_size = str("%0.2f" % (downloads[i].size / 1048576)) + " MB"
+                    i_status = downloads[i].status.replace("active", "active  ")
+                    i_progress = str("%0.2f" % downloads[i].progress) + "%"
+                    i_dl = (str("%0.1f" % downloads[i].dl) + " KB/s").replace("0.0 KB/s", "N/A")
+                    i_eta = downloads[i].eta
+
+                    item = create_item(
+                                           (i_name, s_name),
+                                           (i_size, s_size),
+                                           (i_status, s_status),
+                                           (i_progress, s_progress),
+                                           (i_dl, s_dl),
+                                           (i_eta, s_eta)
+                                          )
+
+                    if i_status == 'waiting':
                         color = 2
-                    elif status == 'complete':
+                    elif i_status == 'complete':
                         color = 3
-                    elif status == 'error':
+                    elif i_status == 'error':
                         color = 4
                     else:
                         color = 1
 
                     screen.addstr(i + 1, 0, item, graphics[i]|curses.color_pair(color))
+
             screen.refresh()
             action = screen.getch()
 
