@@ -67,11 +67,11 @@ class Torrent:
 def check_free():
     free_space = os.statvfs(DOWNLOAD_PATH)[1] * os.statvfs(DOWNLOAD_PATH)[4]
 
-    if free_space < MIN_FREE_SPACE * 1048576:
+    if free_space < (MIN_FREE_SPACE * 1048576):
         print("[  PAUSE  ] Low disk space. Available: " + str(free_space / 1048576) + " MB")
         torrent.method('aria2.pause', torrent.gid)
 
-        while free_space < MIN_FREE_SPACE * 1048576:
+        while free_space < (MIN_FREE_SPACE * 1048576):
             time.sleep(10)
             free_space = os.statvfs(DOWNLOAD_PATH)[1] * os.statvfs(DOWNLOAD_PATH)[4]
 
@@ -80,14 +80,13 @@ def check_free():
 
 
 def advance_queue():
+    if torrent.file != torrent.files:
+        torrent.next()
+        torrent.method('aria2.pause', torrent.gid)
+
     time.sleep(30)
 
-    if torrent.file == torrent.files:
-        print("[   END   ] " + torrent.name)
-        os.remove('torrent.state')
-        sys.exit()
-
-    shutil.move(torrent.file_path, download_path)
+    shutil.move(torrent.file_path, DOWNLOAD_PATH)
     dirlist = glob.glob(os.path.dirname(torrent.file_path) + "/*")
 
     for f in dirlist:
@@ -96,15 +95,21 @@ def advance_queue():
         else:
             shutil.rmtree(f)
 
-    torrent.next()
+    if torrent.file == torrent.files:
+        print("[   END   ] " + torrent.name)
+        os.remove('torrent.state')
+        sys.exit()
+
+    torrent.method('aria2.unpause', torrent.gid)
     print("[ current ] " + os.path.basename(torrent.method('aria2.getFiles', torrent.gid)[int(torrent.file) - 1]['path']))
+
 
 
 def start_queue():
     print("[  BEGIN  ] " + torrent.name)
     torrent.load_state()
 
-    if torrent.status != 'active':
+    if torrent.status != 'active' and torrent.status != 'complete':
         time.sleep(30)
         torrent.method('aria2.unpause', torrent.gid)
         torrent.refresh_status()
@@ -117,7 +122,7 @@ def start_queue():
         if torrent.done == torrent.length:
             advance_queue()
         check_free()
-        time.sleep(30)
+        time.sleep(2)
 
 
 def main():
