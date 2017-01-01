@@ -80,27 +80,31 @@ def check_free():
 
 
 def advance_queue():
+    prev_file_path = torrent.file_path
+
     if torrent.file != torrent.files:
         torrent.next()
-        torrent.method('aria2.pause', torrent.gid)
 
-    time.sleep(30)
+    time.sleep(20)
+    shutil.move(prev_file_path, DOWNLOAD_PATH)
 
-    shutil.move(torrent.file_path, DOWNLOAD_PATH)
-    dirlist = glob.glob(os.path.dirname(torrent.file_path) + "/*")
+    # dirlist = glob.glob(os.path.dirname(torrent.file_path) + "/*")
 
-    for f in dirlist:
-        if os.path.isfile(f):
-            os.remove(f)
-        else:
-            shutil.rmtree(f)
+    # for f in dirlist:
+        # if os.path.isfile(f):
+            # os.remove(f)
+        # else:
+            # shutil.rmtree(f)
+
+        # torrent.refresh_status()
+        # torrent.method('aria2.pause', torrent.gid)
 
     if torrent.file == torrent.files:
         print("[   END   ] " + torrent.name)
         os.remove('torrent.state')
         sys.exit()
 
-    torrent.method('aria2.unpause', torrent.gid)
+    # torrent.method('aria2.unpause', torrent.gid)
     print("[ current ] " + os.path.basename(torrent.method('aria2.getFiles', torrent.gid)[int(torrent.file) - 1]['path']))
 
 
@@ -122,7 +126,7 @@ def start_queue():
         if torrent.done == torrent.length:
             advance_queue()
         check_free()
-        time.sleep(2)
+        time.sleep(1)
 
 
 def main():
